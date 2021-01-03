@@ -1,5 +1,6 @@
 const error = require("console");
 const e = require("express");
+const { query } = require("express");
 const express = require("express");
 const mysql = require("mysql");
 const app = express();
@@ -16,6 +17,7 @@ const conexion = mysql.createConnection({
 });
 
 const queryPromisify = util.promisify(conexion.query).bind(conexion);
+
 conexion.connect((error) => {
   if (error) {
     throw error;
@@ -64,16 +66,15 @@ app.get("/categoria", async (req, res) => {
 
 app.get("/categoria/:id", async (req, res) => {
   try {
-    const id = req.params.id.toUpperCase();
-    const queryCategoriaExistente = "select * from categoria";
-    const validacionCategoria = await queryPromisify(queryCategoriaExistente);
+    const queryValidacionExistencia = "select * from categoria";
+    const validacionCategoria = await queryPromisify(queryValidacionExistencia);
     const existeCategoria = validacionCategoria.find(
-      (elemento) => elemento.nombre == id
-    );
-    if (Boolean(!existeCategoria)) {
-      throw new Error("la categoria no existe");
+      (elemento) => elemento.id == req.params.id
+    );    
+    if (!existeCategoria) {
+      throw new Error("no existe la categoria");
     }
-    const query = "SELECT * FROM categoria WHERE nombre = ?";
+    const query = "select * from categoria where id = ?";
     const respuesta = await queryPromisify(query, [req.params.id]);
     res.status(200).send({ Respuesta: respuesta });
   } catch (error) {
@@ -82,12 +83,26 @@ app.get("/categoria/:id", async (req, res) => {
   }
 });
 
-// app.delete("/categoria/:id", (req, res) => {
-//   try {
-//   } catch (error) {
-//     console.error(error.message);
-//     res.status(413).send({ error: error.message });
-//   }
-// });
+app.delete("/categoria/:id", async (req, res) => {
+  try {
+    const queryHayElementos = "select * from libros where categoria_id = ?";
+    const respuestaQueryElementos = await queryPromisify(query, [
+      req.params.id,
+    ]);
+    if (respuesta.length > 0) {
+      throw new Error(
+        "No se pudo eliminar la categoria porque tiene libros asociados, por favor remueva los libros antes de eliminar esta categoria"
+      );
+    }
+    const queryDelete = "delete from categoria where id = ?";
+    const respuestaQueryDelete = await queryPromisify(queryDelete, [
+      req.params.id,
+    ]);
+    res.status(200).send({ Respuesta: respuestaQueryDelete.affectedRows });
+  } catch (error) {
+    console.error(error.message);
+    res.status(413).send({ error: error.message });
+  }
+});
 
 app.listen(port, () => console.log(`escuchando en el puerto ${port}`));
