@@ -85,11 +85,19 @@ app.get("/categoria/:id", async (req, res) => {
 
 app.delete("/categoria/:id", async (req, res) => {
   try {
+    const queryExisteCategoria = "select * from categoria where id = ?";
+    const respuestaExisteCategoria = await queryPromisify(
+      queryExisteCategoria,
+      [req.params.id]
+    );
+    if (respuestaExisteCategoria.length == 0) {
+      throw new Error("La categoria no existe");
+    }
     const queryHayElementos = "select * from libros where categoria_id = ?";
-    const respuestaQueryElementos = await queryPromisify(query, [
+    const respuestaQueryElementos = await queryPromisify(queryHayElementos, [
       req.params.id,
     ]);
-    if (respuesta.length > 0) {
+    if (respuestaQueryElementos.length > 0) {
       throw new Error(
         "No se pudo eliminar la categoria porque tiene libros asociados, por favor remueva los libros antes de eliminar esta categoria"
       );
@@ -98,7 +106,7 @@ app.delete("/categoria/:id", async (req, res) => {
     const respuestaQueryDelete = await queryPromisify(queryDelete, [
       req.params.id,
     ]);
-    res.status(200).send({ Respuesta: respuestaQueryDelete.affectedRows });
+    res.status(200).send({ Respuesta: "Se borro correctamente" });
   } catch (error) {
     console.error(error.message);
     res.status(413).send({ error: error.message });
